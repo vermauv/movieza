@@ -1,0 +1,170 @@
+<?php
+
+/**
+ * @file
+ * Field formater used with ZM Template.
+ */
+/**
+ * Implements hook_field_formatter_info().
+ */
+function zm_template_field_field_formatter_info() {
+  $field_types = array_keys(field_info_field_types());
+  return array(
+    'zm_template_field' => array(
+      'label' => t('ZM Template Field'),
+      'field types' => $field_types,
+      'settings' => array(
+        'template'      => '',
+        'image_style_1' => 'thumbnail',
+        'image_style_2' => 'medium',
+      ),
+    )
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function zm_template_field_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $form = array();
+  // Show select box for the option set
+  $optionsets = array();
+  foreach (zm_template_load_all() as $name => $optionset) {
+    $optionsets[$name] = check_plain($optionset->title);
+  }
+
+  $form['template'] = array(
+    '#title'         => t('Template'),
+    '#type'          => 'select',
+    '#options'       => $optionsets,
+    '#default_value' => $settings['template'],
+  );
+
+  switch ($field['type']) {
+    case 'image':
+        $image_styles = image_styles();
+        $image_style_options = array();
+        foreach ($image_styles as $stylename => $style) {
+          $image_style_options[$stylename] = $style['label'];
+        }
+
+        $form['image_style_1'] = array(
+          '#type' => 'select',
+          '#title' => t('Image Styles 1'),
+          '#options' => $image_style_options,
+          '#default_value' => $settings['image_style_1'],
+        );
+
+        $form['image_style_2'] = array(
+          '#type' => 'select',
+          '#title' => t('Image Styles 2'),
+          '#options' => $image_style_options,
+          '#default_value' => $settings['image_style_2'],
+        );
+      break;
+  }
+
+  return $form;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function zm_template_field_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $summary = t('ZM Template');
+  if(isset($settings['template'])){
+    foreach (zm_template_load_all() as $name => $optionset) {
+      if($settings['template'] == $name){
+        $summary = t('ZM Template: ') . check_plain($optionset->title);
+      }
+    }
+  }
+
+  return $summary;
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function zm_template_field_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  $settings = $display['settings'];
+  $data = array();
+
+  switch ($field['type']) {
+    case 'image':
+    case 'file':
+      $data = $items;
+      foreach ($data as $key => $item) {
+        $data[$key]['path']  = file_create_url($item['uri']);
+        if($field['type'] == 'image'){
+          $data[$key]['path_1'] = zm_template_field_styled_image_url($item['uri'], $settings['image_style_1']);
+          $data[$key]['path_2'] = zm_template_field_styled_image_url($item['uri'], $settings['image_style_2']);
+        }
+      }
+      break;
+    case 'text':
+    case 'text_long':
+    case 'text_with_summary':
+      foreach ($items as $key => $item) {
+        $data[] = array(
+          'text' => $item['safe_value'],
+        );
+      }
+      break;
+
+    case 'taxonomy_term_reference':
+      foreach ($items as $key => $item) {
+        $term = taxonomy_term_load($item['tid']);
+        $data[] = (array)$term;
+      }
+      break;
+
+    case 'field_collection':
+      $ids      = field_collection_field_item_to_ids($items);
+      $data     = field_collection_item_load_multiple($ids);
+      break;
+
+    case 'entityreference':
+      $ids = array();
+      foreach ($items as $key => $item) {
+        $ids[] = $item['target_id'];
+      }
+      $data = entity_load($field['settings']['target_type'], $ids);
+      break;
+
+    default:
+      $data = $items;
+      break;
+  }
+  $output = '';
+  if(!empty($data)){
+    $output = zm_template_render($settings['template'], array("data" => $data));
+    $element[0] = array(
+      '#markup' => $output,
+    );
+  }
+
+  return $element;
+}
+
+/**
+ * Get image url with stylename
+ * @param  string $image_uri       Image uri.
+ * @param  string $style image style name.
+ * @return string            Return image url.
+ */
+function zm_template_field_styled_image_url($image_uri, $style){
+  $image_filepath = image_style_path($style, $image_uri);
+  if (!file_exists($image_filepath)) {
+    image_style_create_derivative(image_style_load($style), $image_uri, $image_filepath);
+  }
+
+  return file_create_url($image_filepath);
+}

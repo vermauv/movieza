@@ -1,0 +1,192 @@
+<?php
+
+/**
+ * @file
+ * Simple template for ZM distribution.
+ */
+
+include 'zm_template.engine.inc';
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function zm_template_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && $plugin == 'export_ui') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Load all defined template.
+ * @return array
+ */
+function zm_template_load_all(){
+  ctools_include('export');
+  $optionsets = ctools_export_crud_load_all('zm_template');
+  $optionsets_enabled = array();
+  foreach ($optionsets as $key => $option) {
+    if(!isset($option->disabled)){
+      $optionsets_enabled[$key] = $option;
+    }
+  }
+  return $optionsets_enabled;
+}
+
+/**
+ * Fetches the given option set and returns it as an object or NULL, if no set could be found.
+ */
+function zm_template_load($template_name) {
+  ctools_include('export');
+  $template = ctools_export_crud_load('zm_template', $template_name);
+  return $template;
+}
+
+
+/**
+ * Render then template.
+ * @param  string $template_name The template name.
+ * @param  array  $data          The data pass to engine.
+ * @return string                Rendered template.
+ */
+function zm_template_render($template_name, $data = array()){
+  $output = '';
+  if($template_object = zm_template_load($template_name)){
+    $output = zm_template_engine_render_template($template_object, $data);
+    //Add inline CSS
+    if(!empty($template_object->css)){
+      drupal_add_css($template_object->css, 'inline');
+    }
+    //Add external css
+    if(!empty($template_object->ext_css)){
+      $css_arr = explode("\r\n", $template_object->ext_css);
+      foreach ($css_arr as $key => $css_path) {
+        if(strpos($css_path, 'http') === false){
+          // Add inline css.
+          drupal_add_css($css_path);
+        }else{
+          drupal_add_css($css_path, 'external');
+        }
+      }
+    }
+    //Add external js
+    if(!empty($template_object->ext_js)){
+      $js_arr = explode("\r\n", $template_object->ext_js);
+      foreach ($js_arr as $key => $js_path) {
+        drupal_add_js($js_path);
+      }
+    }
+  }
+
+  return $output;
+}
+
+/**
+ * Implement hook_zm_template_functions().
+ *
+ */
+function zm_template_zm_template_functions(){
+  $functions = array();
+
+  $functions[] = new Twig_SimpleFunction('dpm', function ($arg, $name = NULL) {
+      if(function_exists('dpm')){
+        dpm($arg, $name);
+      }
+  });
+
+  $functions[] = new Twig_SimpleFunction('url', function ($arg) {
+
+    return url($arg);
+  });
+
+  $functions[] = new Twig_SimpleFunction('image_style', function ($uri, $style, $class = '', $options = array()) {
+    $options['path'] = $uri;
+    $options['style_name'] = $style;
+    if(!empty($class)) $options['attributes']['class'][] = $class;
+    return theme("image_style", $options);
+  });
+
+  return $functions;
+}
+
+/**
+ * Implementation of hook_form_ctools_export_ui_edit_item_wizard_form_alter().
+ */
+function zm_template_form_ctools_export_ui_edit_item_wizard_form_alter(&$form, &$form_state, $form_id) {
+  zm_template_form_ctools_export_ui_edit_item_form_alter($form, $form_state, $form_id);
+}
+/**
+ * Implementation of hook_form_ctools_export_ui_edit_item_form_alter().
+ */
+function zm_template_form_ctools_export_ui_edit_item_form_alter(&$form, &$form_state, $form_id) {
+  if(isset($form_state['plugin']['schema']) && $form_state['plugin']['schema'] == 'zm_template'){
+    if($path = libraries_get_path("codemirror")){
+      drupal_add_js($path . "/lib/codemirror.js");
+      drupal_add_js($path . "/mode/xml/xml.js");
+      drupal_add_js($path . "/mode/css/css.js");
+      drupal_add_js($path . "/mode/javascript/javascript.js");
+      drupal_add_js($path . "/mode/htmlmixed/htmlmixed.js");
+      drupal_add_js($path . "/addon/mode/overlay.js");
+
+      drupal_add_css($path . "/lib/codemirror.css");
+      drupal_add_css($path . "/theme/monokai.css");
+      drupal_add_css(drupal_get_path("module", "zm_template") . "/css/zm-template.css");
+
+      drupal_add_js('
+      setTimeout(function(){
+
+      CodeMirror.defineMode("mustache", function(config, parserConfig) {
+        var mustacheOverlay = {
+          token: function(stream, state) {
+            var ch;
+            if (stream.match("{{")) {
+              while ((ch = stream.next()) != null)
+                if (ch == "}" && stream.next() == "}") break;
+              stream.eat("}");
+              return "mustache";
+            }
+            while (stream.next() != null && !stream.match("{{", false)) {}
+            return null;
+          }
+        };
+        return CodeMirror.overlayMode(CodeMirror.getMode(config, parserConfig.backdrop || "text/html"), mustacheOverlay);
+      });
+
+      CodeMirror.fromTextArea(document.getElementById("edit-html"), {
+        mode: "mustache",
+        styleActiveLine: true,
+        lineNumbers: true,
+        lineWrapping: true,
+        theme:"monokai",
+        viewportMargin: Infinity
+      });
+
+      CodeMirror.fromTextArea(document.getElementById("edit-css"), {
+        mode: "text/css",
+        styleActiveLine: true,
+        lineNumbers: true,
+        lineWrapping: true,
+        theme:"monokai",
+        viewportMargin: Infinity
+      });
+      }, 500);
+      ', 'inline');
+
+    }
+  }
+}
+
+function zm_template_twig_path($name = ""){
+  if(empty($name)){
+    return file_default_scheme() . "://twig/";
+  }else{
+    return file_default_scheme() . "://twig/" . $name . ".twig";
+  }
+}
+
+function zm_template_twig_cachepath(){
+  return file_default_scheme() . "://twigcache";
+}
+
+function zm_template_save_template($template_code, $name){
+  return file_unmanaged_save_data($template_code, zm_template_twig_path($name), FILE_EXISTS_REPLACE);
+}

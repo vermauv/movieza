@@ -1,0 +1,12 @@
+.form-textarea-wrapper{font-size:16px;border:1px solid #ddd;}
+
+.CodeMirror {
+  border: 1px solid #eee;
+  height: auto;
+}
+.CodeMirror-scroll {
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+.cm-mustache {color: #0ca;}

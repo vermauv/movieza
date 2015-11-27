@@ -1,0 +1,24 @@
+name = ZM Template Views
+description = ZM Template Views integration.
+core = 7.x
+
+package = Views
+
+dependencies[] = zm_template
+dependencies[] = views
+
+files[] = plugins/zm_template/views_zm_template_plugin_style.inc
+
+; Information added by Drupal.org packaging script on 2014-03-11
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "zm_template"
+datestamp = "1394550264"
+
+
+; Information added by Drupal.org packaging script on 2014-04-18
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "zm_template"
+datestamp = "1397838628"
+

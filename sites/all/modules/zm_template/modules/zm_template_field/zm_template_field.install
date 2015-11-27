@@ -1,0 +1,8 @@
+<?php
+
+/**
+ * @file
+ * zm_template_field.install
+ *
+ * Install, update and uninstall functions for the zm_template_field module.
+ */

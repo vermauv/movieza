@@ -1,0 +1,128 @@
+<?php
+
+/**
+ * @file
+ * Fast slideshow for development.
+ */
+
+
+/**
+ * Implements hook_bean_types_api_info().
+ */
+function zm_slideshow_bean_types_api_info() {
+  return array(
+    'api' => 4,
+  );
+}
+
+/**
+ * Implements hook_bean_types().
+ */
+function zm_slideshow_bean_types() {
+  $plugins = array();
+  $plugin_path = drupal_get_path('module', 'zm_slideshow') . '/plugins/bean';
+
+  $plugins['zm_slideshow'] = array(
+    'name' => 'zm_slideshow',
+    'label' => t('ZM Slideshow'),
+    'handler' => array(
+      'class' => 'ZMSlideshowBean',
+      'parent' => 'BeanPlugin',
+      'path' => $plugin_path,
+      'file' => 'ZMSlideshowBean.class.php',
+    ),
+    'editable' => TRUE,
+  );
+  return $plugins;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function zm_slideshow_field_formatter_info() {
+  return array(
+    'zm_slideshow' => array(
+      'label' => t('ZM Slideshow'),
+      'field types' => array('field_collection'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function zm_slideshow_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  $settings = $display['settings'];
+
+  switch ($display['type']) {
+    case 'zm_slideshow':
+      $output = '';
+      $is_zm_slideshow = FALSE;
+      if ($entity_type === 'bean' && ($info = $entity->getInfo())) {
+        $is_zm_slideshow = $info['name'] === 'zm_slideshow';
+      }
+
+      if($is_zm_slideshow){
+        $data = array();
+        $ids = field_collection_field_item_to_ids($items);
+        $fc_datas = field_collection_item_load_multiple($ids);
+
+        $extract_data = array(
+          "image"       => 'field_image',
+          "title"       => 'field_title',
+          "description" => 'field_description',
+          "link"        => 'field_link',
+        );
+
+        $count = 0;
+        foreach ($fc_datas as $index => $fc_item_data) {
+          $data_item = array("index" => $count++);
+          foreach ($extract_data as $key => $setting_field_name) {
+            $data_item[$key] = '';
+            $field_data = field_get_items('field_collection_item', $fc_item_data, $setting_field_name);
+            if($field_data){
+              $field_data = reset($field_data);
+
+              if($key == "link" && isset($field_data['url'])){
+                $data_item[$key] = $field_data['url'];
+              }
+              if($key == "image" && isset($field_data['uri'])){
+                $data_item[$key] = file_create_url($field_data['uri']);
+                if(!empty($entity->data["image_style_1"])){
+                  $data_item[$key . "_1"] = zm_slideshow_styled_image_url($field_data['uri'], $entity->data["image_style_1"]);
+                }
+                if(!empty($entity->data["image_style_2"])){
+                  $data_item[$key . "_2"] = zm_slideshow_styled_image_url($field_data['uri'], $entity->data["image_style_2"]);
+                }
+              }elseif(isset($field_data['safe_value'])){
+                $data_item[$key] = $field_data['safe_value'];
+              }
+            }
+          }
+          $data[] = $data_item;
+        }
+        $output = zm_template_render($entity->data['template'], array("data" => $data));
+      }
+
+      $element[0] = array(
+        '#markup' => $output,
+      );
+      break;
+  }
+  return $element;
+}
+
+/**
+ * Get image url with stylename
+ * @param  string $image_uri       Image uri.
+ * @param  string $style image style name.
+ * @return string            Return image url.
+ */
+function zm_slideshow_styled_image_url($image_uri, $style){
+  $image_filepath = image_style_path($style, $image_uri);
+  if (!file_exists($image_filepath)) {
+    image_style_create_derivative(image_style_load($style), $image_uri, $image_filepath);
+  }
+  return file_create_url($image_filepath);
+}

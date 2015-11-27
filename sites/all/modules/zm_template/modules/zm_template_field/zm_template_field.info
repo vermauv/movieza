@@ -1,0 +1,21 @@
+name = ZM Template Field
+description = Field formater used with ZM Template.
+core = 7.x
+php = 5.3
+
+package = ZM
+dependencies[] = zm_template
+
+; Information added by Drupal.org packaging script on 2014-03-11
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "zm_template"
+datestamp = "1394550264"
+
+
+; Information added by Drupal.org packaging script on 2014-04-18
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "zm_template"
+datestamp = "1397838628"
+

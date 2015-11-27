@@ -1,0 +1,83 @@
+<?php
+
+/**
+ * @file
+ * zm_template.install
+ *
+ * Install, update and uninstall functions for the zm_template module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function zm_template_schema() {
+  $schema = array();
+
+  $schema['zm_template'] = array(
+    'description' => 'Store option sets for ZM template.',
+    'export' => array(
+      'key' => 'name',
+      'key name' => 'Machine name',
+      'admin_title' => 'title',
+      'identifier' => 'preset',
+      'default hook' => 'zm_template_default_presets',
+      'api' => array(
+        'owner' => 'zm_template',
+        'api' => 'zm_template_default_preset',
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+    'fields' => array(
+      'name' => array(
+        'description' => 'The machine-readable option set name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'The human-readable title for this option set.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'html' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'HTML markup for ZM template.',
+        'translatable' => TRUE,
+      ),
+      'css' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'CSS code for ZM template.',
+        'translatable' => TRUE,
+      ),
+      'ext_css' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'External CSS files for ZM template.',
+        'translatable' => TRUE,
+      ),
+      'ext_js' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => 'External JS files for ZM template.',
+        'translatable' => TRUE,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the template was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('name'),
+  );
+
+  return $schema;
+}

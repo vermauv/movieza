@@ -1,0 +1,25 @@
+name = ZM Slideshow
+description = Fast slideshow for development.
+core = 7.x
+
+package = ZM
+
+dependencies[] = bean
+dependencies[] = field_collection
+dependencies[] = link
+dependencies[] = zm_template
+
+; Module style sheets and scripts
+; stylesheets[all][] = zm_slideshow.css
+; scripts[] = zm_slideshow.js
+
+; Loadable code files
+; files[] = zm_slideshow.admin.inc
+; files[] = zm_slideshow.test
+
+; Information added by Drupal.org packaging script on 2014-03-10
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "zm_slideshow"
+datestamp = "1394433135"
+
